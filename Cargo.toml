@@ -1,0 +1,11 @@
+[package]
+name = "xpt-r"
+version = "0.1.0"
+edition = "2021"
+[lib]
+[dependencies]
+encoding = { version = "0.2", optional = true }
+tokio = { version = "1.43.0" , features = ["io-util", "fs","rt","sync"],optional = true}
+[features]
+multi_encoding = ["encoding"]
+async = ["tokio"]
