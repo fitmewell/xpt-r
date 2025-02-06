@@ -1,6 +1,3 @@
-Here's an English README template that incorporates and explains your example code:
-
----
 # XPT File Reader (Async Rust)
 
 A high-performance asynchronous SAS XPT file parser implemented in Rust, supporting both basic and multi-byte encodings.
