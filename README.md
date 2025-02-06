@@ -103,13 +103,3 @@ cargo test --features "async multi_encoding"
 ## License
 MIT License
 ---
-
-This README template:
-1. Matches the async implementation shown in your code
-2. Explains the dual encoding support through feature flags
-3. Highlights the streaming nature of the parser
-4. Shows both metadata and data reading aspects
-5. Includes configuration options visible in the test code
-6. Maintains Rust-idiomatic presentation
-
-Would you like me to adjust any particular section or add more details about specific components?
