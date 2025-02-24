@@ -15,11 +15,7 @@ use std::fmt::Display;
 #[cfg(not(feature = "async"))]
 use {std::cell::RefCell, std::io::Read, std::rc::Rc};
 #[cfg(feature = "async")]
-use {
-    std::sync::{Arc},
-    tokio::io::AsyncReadExt,
-    tokio::sync::Mutex
-};
+use {std::sync::Arc, tokio::io::AsyncReadExt, tokio::sync::Mutex};
 
 pub(crate) struct ReaderWrap<'a> {
     #[cfg(not(feature = "async"))]
@@ -260,7 +256,7 @@ impl<'a> RawReader<'a> {
                 }
             } else {
                 let decoder = self.string_decoder;
-                Val::Char(decoder(&self.line_str_array[start..end]))
+                Val::Char(decoder(&self.line_str_array[start..end])?)
             });
         }
         self.line_number += 1;
@@ -292,7 +288,7 @@ impl<'a> RawReader<'a> {
                 }
             } else {
                 let decoder = self.string_decoder;
-                Val::Char(decoder(&self.line_str_array[start..end]))
+                Val::Char(decoder(&self.line_str_array[start..end])?)
             });
         }
         self.line_number += 1;
@@ -311,9 +307,8 @@ pub struct Reader<'a> {
 #[cfg(feature = "multi_encoding")]
 pub const GBK_STRING_DECODER: StringDecoder = |x| {
     GBK.decode(x, DecoderTrap::Ignore)
-        .unwrap()
-        .trim()
-        .to_string()
+        .map_err(|x| XPTError::DecodeError(x.to_string()))
+        .map(|x| x.trim().to_string())
 };
 
 impl<'a> Reader<'a> {
@@ -403,8 +398,10 @@ impl<'a> Reader<'a> {
                 for i in 0..str_title_header {
                     let name_st: V5NameSt = reader.read2(&mut name_str_array);
                     line_length = name_st.npos + ((&name_st).nlng as u32);
-                    column_meta_array
-                        .insert(i.into(), ColumnMeta::from_v5(&name_st, self.string_decoder));
+                    column_meta_array.insert(
+                        i.into(),
+                        ColumnMeta::from_v5(&name_st, self.string_decoder)?,
+                    );
                     v5_name_sts.insert(i.into(), (name_st.npos, name_st.nlng, name_st.ntype));
                 }
                 if left_blank > 0 {
@@ -417,8 +414,10 @@ impl<'a> Reader<'a> {
                 for i in 0..str_title_header {
                     let name_st: V8NameSt = reader.read2(&mut name_str_array);
                     line_length = name_st.npos + ((&name_st).nlng as u32);
-                    column_meta_array
-                        .insert(i.into(), ColumnMeta::from_v8(&name_st, self.string_decoder));
+                    column_meta_array.insert(
+                        i.into(),
+                        ColumnMeta::from_v8(&name_st, self.string_decoder)?,
+                    );
                     if name_st.lablen > 40 {
                         with_long_label = true;
                     }
@@ -451,10 +450,10 @@ impl<'a> Reader<'a> {
                         let option = var_map.get_mut(&var_number).unwrap();
                         let mut vec2 = vec![0; name_len as usize];
                         reader.read_exact(vec2.as_mut_slice())?;
-                        option.name = decoder(vec2.as_slice());
+                        option.name = decoder(vec2.as_slice())?;
                         vec2 = vec![0; label_len as usize];
                         reader.read_exact(vec2.as_mut_slice())?;
-                        option.label = decoder(vec2.as_slice());
+                        option.label = decoder(vec2.as_slice())?;
                         left_blank = (left_blank + 6 + name_len + label_len) % 80;
                     }
                     if left_blank > 0 {
@@ -481,13 +480,13 @@ impl<'a> Reader<'a> {
             },
             DocumentMeta {
                 version: document_header,
-                doc_version: decoder(&document_base.version.inner),
-                operation_system: decoder(&document_base.operation_system.inner),
+                doc_version: decoder(&document_base.version.inner)?,
+                operation_system: decoder(&document_base.operation_system.inner)?,
                 doc_update_time: update_date,
-                dataset_name: decoder(&library_base.version.inner),
+                dataset_name: decoder(&library_base.version.inner)?,
                 lib_update_time: library_update_date,
                 member_meta_length: member_title_header,
-                library: decoder(&library_base.dataset_name.inner),
+                library: decoder(&library_base.dataset_name.inner)?,
                 columns: column_meta_array,
             },
         ))
@@ -553,8 +552,10 @@ impl<'a> Reader<'a> {
                 for i in 0..str_title_header {
                     let name_st: V5NameSt = reader.read2(&mut name_str_array).await;
                     line_length = name_st.npos + ((&name_st).nlng as u32);
-                    column_meta_array
-                        .insert(i.into(), ColumnMeta::from_v5(&name_st, self.string_decoder));
+                    column_meta_array.insert(
+                        i.into(),
+                        ColumnMeta::from_v5(&name_st, self.string_decoder)?,
+                    );
                     v5_name_sts.insert(i.into(), (name_st.npos, name_st.nlng, name_st.ntype));
                 }
                 if left_blank > 0 {
@@ -567,8 +568,10 @@ impl<'a> Reader<'a> {
                 for i in 0..str_title_header {
                     let name_st: V8NameSt = reader.read2(&mut name_str_array).await;
                     line_length = name_st.npos + ((&name_st).nlng as u32);
-                    column_meta_array
-                        .insert(i.into(), ColumnMeta::from_v8(&name_st, self.string_decoder));
+                    column_meta_array.insert(
+                        i.into(),
+                        ColumnMeta::from_v8(&name_st, self.string_decoder)?,
+                    );
                     if name_st.lablen > 40 {
                         with_long_label = true;
                     }
@@ -602,10 +605,10 @@ impl<'a> Reader<'a> {
                         let option = var_map.get_mut(&var_number).unwrap();
                         let mut vec2 = vec![0; name_len as usize];
                         reader.read_exact(vec2.as_mut_slice()).await?;
-                        option.name = decoder(vec2.as_slice());
+                        option.name = decoder(vec2.as_slice())?;
                         vec2 = vec![0; label_len as usize];
                         reader.read_exact(vec2.as_mut_slice()).await?;
-                        option.label = decoder(vec2.as_slice());
+                        option.label = decoder(vec2.as_slice())?;
                         left_blank = (left_blank + 6 + name_len + label_len) % 80;
                     }
                     if left_blank > 0 {
@@ -633,13 +636,13 @@ impl<'a> Reader<'a> {
             },
             DocumentMeta {
                 version: document_header,
-                doc_version: decoder(&document_base.version.inner),
-                operation_system: decoder(&document_base.operation_system.inner),
+                doc_version: decoder(&document_base.version.inner)?,
+                operation_system: decoder(&document_base.operation_system.inner)?,
                 doc_update_time: update_date,
-                dataset_name: decoder(&library_base.version.inner),
+                dataset_name: decoder(&library_base.version.inner)?,
                 lib_update_time: library_update_date,
                 member_meta_length: member_title_header,
-                library: decoder(&library_base.dataset_name.inner),
+                library: decoder(&library_base.dataset_name.inner)?,
                 columns: column_meta_array,
             },
         ))
@@ -648,6 +651,7 @@ impl<'a> Reader<'a> {
 
 #[cfg(test)]
 mod test {
+    use crate::error::XPTError;
     use crate::reader::{byte2number, number2Byte, Reader};
     #[cfg(not(feature = "async"))]
     use std::fs::File;
@@ -663,7 +667,9 @@ mod test {
                 let mut file = tokio::fs::File::open("sample/LB2.xpt").await.unwrap();
                 #[cfg(not(feature = "multi_encoding"))]
                 let mut reader = Reader::new(&mut file, |x| {
-                    String::from_utf8(x.to_vec()).unwrap().trim().to_string()
+                    String::from_utf8(x.to_vec())
+                        .map_err(|x| XPTError::DecodeError(x.to_string()))
+                        .map(|x| x.trim().to_string())
                 });
                 #[cfg(feature = "multi_encoding")]
                 let mut reader = Reader::new_gbk(&mut file);
@@ -708,7 +714,9 @@ mod test {
         let mut file = File::open("sample/LB2.xpt").unwrap();
         #[cfg(not(feature = "multi_encoding"))]
         let mut reader = Reader::new(&mut file, |x| {
-            String::from_utf8(x.to_vec()).unwrap().trim().to_string()
+            String::from_utf8(x.to_vec())
+                .map_err(|x| XPTError::DecodeError(x.to_string()))
+                .map(|x| x.trim().to_string())
         });
         #[cfg(feature = "multi_encoding")]
         let mut reader = Reader::new_gbk(&mut file);

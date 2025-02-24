@@ -242,11 +242,11 @@ pub struct ColumnMeta {
     pub in_format: (String, u16, u16),
 }
 
-pub type StringDecoder = fn(&[u8]) -> String;
+pub type StringDecoder = fn(&[u8]) -> Result<String, XPTError>;
 
 impl ColumnMeta {
-    pub fn from_v5(name_st: &V5NameSt, decode: StringDecoder) -> Self {
-        Self {
+    pub fn from_v5(name_st: &V5NameSt, decode: StringDecoder) -> Result<Self, XPTError> {
+        Ok(Self {
             column_type: match name_st.ntype {
                 1 => ColumnType::NUMERIC,
                 2 => ColumnType::CHAR,
@@ -254,15 +254,15 @@ impl ColumnMeta {
             },
             length: name_st.nlng,
             var_count: name_st.nvar0,
-            name: decode(&name_st.nname.inner),
-            label: decode(&name_st.nlabel.inner),
-            format: (decode(&name_st.nform.inner), name_st.nfl, name_st.nfd),
-            in_format: (decode(&name_st.niform.inner), name_st.nifl, name_st.nifd),
-        }
+            name: decode(&name_st.nname.inner)?,
+            label: decode(&name_st.nlabel.inner)?,
+            format: (decode(&name_st.nform.inner)?, name_st.nfl, name_st.nfd),
+            in_format: (decode(&name_st.niform.inner)?, name_st.nifl, name_st.nifd),
+        })
     }
 
-    pub fn from_v8(name_st: &V8NameSt, decode: StringDecoder) -> Self {
-        Self {
+    pub fn from_v8(name_st: &V8NameSt, decode: StringDecoder) -> Result<Self, XPTError> {
+        Ok(Self {
             column_type: match name_st.ntype {
                 1 => ColumnType::NUMERIC,
                 2 => ColumnType::CHAR,
@@ -270,11 +270,11 @@ impl ColumnMeta {
             },
             length: name_st.nlng,
             var_count: name_st.nvar0,
-            name: decode(&name_st.nlname.inner),
-            label: decode(&name_st.nlabel.inner),
-            format: (decode(&name_st.nform.inner), name_st.nfl, name_st.nfd),
-            in_format: (decode(&name_st.niform.inner), name_st.nifl, name_st.nifd),
-        }
+            name: decode(&name_st.nlname.inner)?,
+            label: decode(&name_st.nlabel.inner)?,
+            format: (decode(&name_st.nform.inner)?, name_st.nfl, name_st.nfd),
+            in_format: (decode(&name_st.niform.inner)?, name_st.nifl, name_st.nifd),
+        })
     }
 }
 
